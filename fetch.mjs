@@ -109,9 +109,14 @@ async function run() {
     sources.manifold.ok = true;
   } catch (e) { console.error('Manifold:', e.message); }
 
+  // Rien collecté (toutes les sources en panne) : on NE réécrit PAS data.json,
+  // on conserve la dernière version valide versionnée pour ne pas vider le site.
+  if (!all.length) {
+    console.error('Aucun marché collecté — conservation du data.json existant.');
+    return;
+  }
   const out = { generated: new Date().toISOString(), sources, all };
   writeFileSync('data.json', JSON.stringify(out));
   console.log('Wrote data.json —', all.length, 'markets', JSON.stringify(sources));
-  if (!all.length) process.exit(1);
 }
 run().catch(e => { console.error(e); process.exit(1); });
