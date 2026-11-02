@@ -9,6 +9,7 @@
   :root{
     --bg:#e8e6df; --fg:#17150f; --muted:#8a8578; --border:#cdc9bd;
     --accent:#0d6b2f;
+    --pm:#2f6bff; --kalshi:#009a7b; --manifold:#6a4ff0;
     --track:#dcd9cf; --fill:rgba(23,21,15,.11);
     --rule:#17150f;
     --disp:'Bebas Neue','Oswald','Arial Narrow',sans-serif;
@@ -16,12 +17,14 @@
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
     --bg:#0c0b09; --fg:#e8e4d8; --muted:#807c70; --border:#2b2924;
-    --accent:#44d06f; --track:#1b1915; --fill:rgba(232,228,216,.12); --rule:#e8e4d8;
+    --accent:#44d06f; --pm:#5b8cff; --kalshi:#2ad4a6; --manifold:#9d8bf5;
+    --track:#1b1915; --fill:rgba(232,228,216,.12); --rule:#e8e4d8;
     color-scheme:dark;
   }}
   :root[data-theme="dark"]{
     --bg:#0c0b09; --fg:#e8e4d8; --muted:#807c70; --border:#2b2924;
-    --accent:#44d06f; --track:#1b1915; --fill:rgba(232,228,216,.12); --rule:#e8e4d8;
+    --accent:#44d06f; --pm:#5b8cff; --kalshi:#2ad4a6; --manifold:#9d8bf5;
+    --track:#1b1915; --fill:rgba(232,228,216,.12); --rule:#e8e4d8;
     color-scheme:dark;
   }
   *{box-sizing:border-box}
@@ -49,7 +52,7 @@
   .tab{flex:none;font-family:var(--disp);font-weight:400;font-size:22px;line-height:1;letter-spacing:.03em;color:var(--muted);background:transparent;border:0;padding:3px 0 10px;cursor:pointer;white-space:nowrap;text-transform:uppercase;position:relative}
   .tab:hover{color:var(--fg)}
   .tab[aria-selected="true"]{color:var(--fg)}
-  .tab[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:3px;background:var(--accent)}
+  .tab[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:3px;background:var(--fg)}
   .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   /* Contrôles */
@@ -63,31 +66,34 @@
   .search{flex:1 1 240px;min-width:0}
   .search input{width:100%;font-family:var(--mono);font-size:13px;color:var(--fg);background:transparent;border:0;border-bottom:1px solid var(--border);padding:6px 0}
   .search input::placeholder{color:var(--muted)}
-  .search input:focus{outline:none;border-bottom:1px solid var(--accent)}
+  .search input:focus{outline:none;border-bottom:1px solid var(--fg)}
 
   /* Sections par source */
-  .lane{margin-bottom:38px}
+  .lane{margin-bottom:48px}
   .lane[hidden]{display:none}
-  .sec-head{padding-bottom:6px;border-bottom:2px solid var(--rule)}
-  .sec-head h2{font-family:var(--disp);font-weight:400;font-size:28px;line-height:1;letter-spacing:.03em;margin:0;text-transform:uppercase}
-  .sec-head h2 .sq{display:none}
+  .lane[data-source="polymarket"],.card[data-source="polymarket"]{--src:var(--pm)}
+  .lane[data-source="kalshi"],.card[data-source="kalshi"]{--src:var(--kalshi)}
+  .lane[data-source="manifold"],.card[data-source="manifold"]{--src:var(--manifold)}
+  .sec-head{padding-bottom:7px;border-bottom:3px solid var(--src)}
+  .sec-head h2{font-family:var(--disp);font-weight:400;font-size:28px;line-height:1;letter-spacing:.03em;margin:0;text-transform:uppercase;color:var(--src);display:flex;align-items:center;gap:9px}
+  .sec-head h2 .sq{display:block;width:11px;height:11px;background:var(--src);flex:none}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));column-gap:38px;row-gap:0}
   .card{background:transparent;border:0;border-top:1px solid var(--border);border-radius:0;padding:14px 0 16px;box-shadow:none;display:flex;flex-direction:column;gap:9px;min-width:0}
   .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-  .badge{display:none}
+  .badge{font-family:var(--mono);font-weight:700;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--src)}
   .vol{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-transform:uppercase}
   .card-title{font-family:var(--mono);font-weight:700;font-size:13px;line-height:1.35;margin:0;color:var(--fg)}
   a.card-title{text-decoration:none;border-bottom:1px solid transparent;transition:border-color .12s}
-  a.card-title:hover{border-color:var(--accent);color:var(--accent)}
+  a.card-title:hover{border-color:var(--src);color:var(--src)}
   .outcomes{display:flex;flex-direction:column;gap:3px;margin-top:1px}
   .oc{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
   .oc-track{position:relative;height:25px;background:var(--track);border-radius:0;overflow:hidden;display:flex;align-items:center;min-width:0}
   .oc-fill{position:absolute;top:0;left:0;bottom:0;background:var(--fill)}
-  .oc.lead .oc-fill{background:color-mix(in srgb,var(--accent) 24%,transparent)}
+  .oc.lead .oc-fill{background:color-mix(in srgb,var(--src) 26%,transparent)}
   .oc-label{position:relative;z-index:1;padding:0 8px;font-family:var(--mono);font-size:11.5px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .oc-pct{font-family:var(--disp);font-weight:400;font-size:20px;line-height:1;color:var(--fg);font-variant-numeric:tabular-nums;text-align:right;min-width:2.3em}
-  .oc.lead .oc-pct{color:var(--accent)}
+  .oc.lead .oc-pct{color:var(--src)}
   .card-foot{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--muted);padding-top:7px;margin-top:2px;text-transform:uppercase}
   .empty{grid-column:1/-1;color:var(--muted);font-family:var(--mono);font-size:12px;padding:16px 0 0}
 
@@ -125,11 +131,11 @@
 <script>
 (function(){
   "use strict";
-  var CATS=[['politique','Politique','politics'],['crypto','Crypto','crypto'],['sport','Sport','sports'],['eco','Éco & Finance','economy'],['culture','Culture','pop-culture'],['monde','Monde','world'],['tech','Tech & Science','tech']];
+  var CATS=[['trending','Trending',null],['politique','Politique','politics'],['crypto','Crypto','crypto'],['sport','Sport','sports'],['eco','Éco & Finance','economy'],['culture','Culture','pop-culture'],['monde','Monde','world'],['tech','Tech & Science','tech']];
   function catSlug(k){for(var i=0;i<CATS.length;i++)if(CATS[i][0]===k)return CATS[i][2];return k;}
   var pmLive={}, pmSeq=0;
   var SOURCES=['polymarket','kalshi','manifold'];
-  var DATA=null, active='politique', query='';
+  var DATA=null, active='trending', query='';
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function fmtDate(d){if(d==null||d==='')return '';var t=typeof d==='number'?d:Date.parse(d);if(!isFinite(t))return '';try{return new Date(t).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});}catch(e){return '';}}
@@ -154,7 +160,8 @@
   function render(){
     if(!DATA){SOURCES.forEach(function(s){document.querySelector('#sec-'+s+' .grid').innerHTML='<div class="empty">Chargement…</div>';});return;}
     if(query.length>=2)return; // la recherche est gérée en direct par runSearch()
-    var g=bySrc(DATA.all.filter(function(x){return x.c===active;}));
+    var pool=active==='trending'?dedupe(DATA.all):DATA.all.filter(function(x){return x.c===active;});
+    var g=bySrc(pool);
     ['kalshi','manifold'].forEach(function(s){
       var arr=g[s].slice().sort(byV).slice(0,40);
       var srcOk=!DATA.sources||!DATA.sources[s]||DATA.sources[s].ok;
@@ -166,10 +173,10 @@
     if(pmLive[cat]){laneRender('polymarket',pmLive[cat],'Aucun marché dans cette catégorie.');return;}
     document.querySelector('#sec-polymarket .grid').innerHTML='<div class="empty">Chargement en direct…</div>';
     var seq=++pmSeq, c=cat;
-    loadPMcat(catSlug(c)).then(function(it){pmLive[c]=it;try{localStorage.setItem('pm_'+c,JSON.stringify(it));}catch(e){}if(c!==active||seq!==pmSeq||query.length>=2)return;laneRender('polymarket',it,'Aucun marché dans cette catégorie.');})
+    loadPMcat(c).then(function(it){pmLive[c]=it;try{localStorage.setItem('pm_'+c,JSON.stringify(it));}catch(e){}if(c!==active||seq!==pmSeq||query.length>=2)return;laneRender('polymarket',it,'Aucun marché dans cette catégorie.');})
     .catch(function(){if(c!==active||seq!==pmSeq||query.length>=2)return;var f=DATA.all.filter(function(x){return x.s==='polymarket'&&x.c===c;}).sort(byV).slice(0,40);if(!f.length){try{f=JSON.parse(localStorage.getItem('pm_'+c))||[];}catch(e){f=[];}}laneRender('polymarket',f,'Polymarket indisponible — réessaie « Rafraîchir ».');});
   }
-  async function loadPMcat(slug){var d=await jget('https://gamma-api.polymarket.com/events?closed=false&limit=24&order=volume24hr&ascending=false&tag_slug='+slug);return pmParse(d).sort(byV).slice(0,40);}
+  async function loadPMcat(cat){var base='https://gamma-api.polymarket.com/events?closed=false&limit=24&order=volume24hr&ascending=false';var url=cat==='trending'?base:base+'&tag_slug='+catSlug(cat);var d=await jget(url);return pmParse(d).sort(byV).slice(0,40);}
 
   // ---- recherche EN DIRECT sur tout le catalogue ----
   var JINA='https://r.jina.ai/', sseq=0;
