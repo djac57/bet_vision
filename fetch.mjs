@@ -53,13 +53,13 @@ function kItem(e) {
   const ms = e.markets || [], outs = []; let oi = 0, end = null;
   for (const m of ms) {
     const p = kPrice(m); if (p == null) continue;
-    outs.push({ l: ms.length > 1 ? (m.yes_sub_title || m.title) : 'Oui', p: r4(p) });
+    outs.push({ l: ms.length > 1 ? (m.yes_sub_title || m.title) : 'Oui', p: r4(p), tk: m.ticker });
     oi += (+m.open_interest_fp || 0);
     if (m.close_time) end = m.close_time;
   }
   if (!outs.length) return null;
   outs.sort((a, b) => b.p - a.p);
-  return { s: 'kalshi', t: e.title, u: e.series_ticker ? 'https://kalshi.com/markets/' + e.series_ticker : '', e: end || '', c: null, v: oi, m: comp(oi) + ' OI', o: outs.slice(0, 6) };
+  return { s: 'kalshi', t: e.title, u: e.series_ticker ? 'https://kalshi.com/markets/' + e.series_ticker : '', e: end || '', c: null, v: oi, m: comp(oi) + ' OI', series: e.series_ticker || '', o: outs.slice(0, 6) };
 }
 function manItems(arr, cat) {
   return (arr || []).filter(m => typeof m.probability === 'number' && !m.isResolved)

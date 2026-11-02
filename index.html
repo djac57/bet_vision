@@ -103,6 +103,32 @@
   .card-foot{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--muted);padding-top:7px;margin-top:2px;text-transform:uppercase}
   .empty{grid-column:1/-1;color:var(--muted);font-family:var(--mono);font-size:12px;padding:16px 0 0}
 
+  button.card-title{background:none;border:0;padding:0;margin:0;text-align:left;width:100%;cursor:pointer;color:var(--fg)}
+  button.card-title:hover{color:var(--src)}
+  button.card-title::after{content:" ↗";font-family:var(--mono);font-size:10px;color:var(--muted)}
+  button.card-title:hover::after{color:var(--src)}
+
+  .overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}
+  .overlay[hidden]{display:none}
+  .overlay[data-source="polymarket"]{--src:var(--pm)} .overlay[data-source="kalshi"]{--src:var(--kalshi)} .overlay[data-source="manifold"]{--src:var(--manifold)}
+  .ovbg{position:absolute;inset:0;background:rgba(5,5,5,.6);backdrop-filter:blur(2px)}
+  .ovpanel{position:relative;width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--bg);border:1px solid var(--rule);box-shadow:0 24px 70px rgba(0,0,0,.45);padding:18px 20px 20px;animation:pop .16s ease-out}
+  @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.ovpanel{animation:none}}
+  .ovhead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:3px solid var(--src);padding-bottom:10px;margin-bottom:16px}
+  .ovsrc{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--src)}
+  .ovtitle{font-family:var(--mono);font-weight:700;font-size:15px;line-height:1.32;margin:5px 0 0;color:var(--fg)}
+  .ovclose{font-family:var(--disp);font-size:30px;line-height:.6;background:none;border:0;color:var(--muted);cursor:pointer;padding:0 2px}
+  .ovclose:hover{color:var(--fg)}
+  .ovbody{min-height:220px}
+  .chart{width:100%;height:auto;display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px}
+  .leg{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--fg)}
+  .leg .sw{width:14px;height:3px;flex:none}
+  .leg .lv{color:var(--muted)}
+  .ovload{font-family:var(--mono);font-size:12px;color:var(--muted);padding:70px 0;text-align:center}
+  .ovfoot{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:14px;border-top:1px solid var(--border);padding-top:10px}
+
   footer.foot{border-top:3px solid var(--rule);margin-top:12px;padding-top:12px;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
   footer.foot b{color:var(--fg)} footer.foot .mono{font-family:var(--mono)} footer.foot a{color:var(--accent)}
 </style>
@@ -137,17 +163,30 @@
   <footer class="foot">cotes indicatives pour recherche uniquement, pas un conseil d'investissement</footer>
 </div>
 
+<div class="overlay" id="ov" hidden>
+  <div class="ovbg" id="ovbg"></div>
+  <div class="ovpanel" role="dialog" aria-modal="true">
+    <div class="ovhead">
+      <div><div class="ovsrc" id="ovsrc"></div><h2 class="ovtitle" id="ovtitle"></h2></div>
+      <button class="ovclose" id="ovclose" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="ovbody" id="ovbody"></div>
+    <div class="ovfoot" id="ovfoot"></div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
   var CATS=[['trending','Trending',null],['politique','Politique','politics'],['crypto','Crypto','crypto'],['sport','Sport','sports'],['eco','Éco & Finance','economy'],['culture','Culture','pop-culture'],['monde','Monde','world'],['tech','Tech & Science','tech']];
   function catSlug(k){for(var i=0;i<CATS.length;i++)if(CATS[i][0]===k)return CATS[i][2];return k;}
   var pmLive={}, pmSeq=0;
+  var REG={}, uid=0;
   var SOURCES=['polymarket','kalshi','manifold'];
   var DATA=null, active='trending', query='';
   var T={
-    fr:{title:'Baromètre des paris',refresh:'Rafraîchir',searchPh:'Rechercher dans tout le catalogue (ex. le pen, bitcoin, super bowl)…',resolution:'Résolution',loading:'Chargement…',loadingLive:'Chargement en direct…',searchingLive:'Recherche en direct…',noMarket:'Aucun marché dans cette catégorie.',noResult:'Aucun résultat.',srcUnavail:'Source indisponible à la dernière collecte.',pmUnavail:'Polymarket indisponible — réessaie « Rafraîchir ».',footer:'cotes indicatives pour recherche uniquement, pas un conseil d’investissement',cats:{trending:'Tendances',politique:'Politique',crypto:'Crypto',sport:'Sport',eco:'Éco & Finance',culture:'Culture',monde:'Monde',tech:'Tech & Science'}},
-    en:{title:'Betting Barometer',refresh:'Refresh',searchPh:'Search the whole catalogue (e.g. le pen, bitcoin, super bowl)…',resolution:'Resolves',loading:'Loading…',loadingLive:'Loading live…',searchingLive:'Searching live…',noMarket:'No markets in this category.',noResult:'No results.',srcUnavail:'Source unavailable at last collection.',pmUnavail:'Polymarket unavailable — try Refresh.',footer:'odds for research only, not investment advice',cats:{trending:'Trending',politique:'Politics',crypto:'Crypto',sport:'Sports',eco:'Econ & Finance',culture:'Culture',monde:'World',tech:'Tech & Science'}}
+    fr:{title:'Baromètre des paris',refresh:'Rafraîchir',searchPh:'Rechercher dans tout le catalogue (ex. le pen, bitcoin, super bowl)…',resolution:'Résolution',loading:'Chargement…',loadingLive:'Chargement en direct…',searchingLive:'Recherche en direct…',noMarket:'Aucun marché dans cette catégorie.',noResult:'Aucun résultat.',srcUnavail:'Source indisponible à la dernière collecte.',pmUnavail:'Polymarket indisponible — réessaie « Rafraîchir ».',footer:'cotes indicatives pour recherche uniquement, pas un conseil d’investissement',chartLoading:'Chargement de l’historique…',chartNone:'Historique indisponible pour ce marché.',chartErr:'Historique indisponible — réessaie.',chartNote:'Probabilité implicite dans le temps · via proxy jina',cats:{trending:'Tendances',politique:'Politique',crypto:'Crypto',sport:'Sport',eco:'Éco & Finance',culture:'Culture',monde:'Monde',tech:'Tech & Science'}},
+    en:{title:'Betting Barometer',refresh:'Refresh',searchPh:'Search the whole catalogue (e.g. le pen, bitcoin, super bowl)…',resolution:'Resolves',loading:'Loading…',loadingLive:'Loading live…',searchingLive:'Searching live…',noMarket:'No markets in this category.',noResult:'No results.',srcUnavail:'Source unavailable at last collection.',pmUnavail:'Polymarket unavailable — try Refresh.',footer:'odds for research only, not investment advice',chartLoading:'Loading history…',chartNone:'No history available for this market.',chartErr:'History unavailable — try again.',chartNote:'Implied probability over time · via jina proxy',cats:{trending:'Trending',politique:'Politics',crypto:'Crypto',sport:'Sports',eco:'Econ & Finance',culture:'Culture',monde:'World',tech:'Tech & Science'}}
   };
   var lang='fr';try{lang=localStorage.getItem('lang')||((navigator.language||'').slice(0,2)==='en'?'en':'fr');}catch(e){}
   function tr(k){return (T[lang]||T.fr)[k];}
@@ -157,7 +196,9 @@
   function fmtDate(d){if(d==null||d==='')return '';var t=typeof d==='number'?d:Date.parse(d);if(!isFinite(t))return '';try{return new Date(t).toLocaleDateString(lang==='en'?'en-GB':'fr-FR',{day:'numeric',month:'short',year:'numeric'});}catch(e){return '';}}
 
   function cardHTML(it){
-    var titleHTML=it.u?'<a class="card-title" href="'+esc(it.u)+'" target="_blank" rel="noopener">'+esc(it.t)+'</a>':'<h3 class="card-title">'+esc(it.t)+'</h3>';
+    var titleHTML;
+    if(it.s==='manifold'){titleHTML=it.u?'<a class="card-title" href="'+esc(it.u)+'" target="_blank" rel="noopener">'+esc(it.t)+'</a>':'<h3 class="card-title">'+esc(it.t)+'</h3>';}
+    else{var rid='r'+(uid++);REG[rid]=it;titleHTML='<button class="card-title ctitle" type="button" data-rid="'+rid+'">'+esc(it.t)+'</button>';}
     var rows=(it.o||[]).map(function(o,i){var w=Math.max(2,Math.min(100,Math.round(o.p*100)));return '<div class="oc'+(i===0?' lead':'')+'"><div class="oc-track"><div class="oc-fill" style="width:'+w+'%"></div><span class="oc-label" title="'+esc(o.l)+'">'+esc(o.l)+'</span></div><span class="oc-pct">'+Math.round(o.p*100)+'%</span></div>';}).join('');
     var end=fmtDate(it.e);
     return '<article class="card" data-source="'+esc(it.s)+'"><header class="card-head"><span class="badge">'+esc(it.s)+'</span><span class="vol">'+esc(it.m||'')+'</span></header>'+titleHTML+'<div class="outcomes">'+rows+'</div>'+(end?'<footer class="card-foot">'+tr('resolution')+' '+end+'</footer>':'')+'</article>';
@@ -199,7 +240,7 @@
   async function jget(url){var r=await fetch(JINA+url,{headers:{'x-respond-with':'text'}});if(!r.ok)throw new Error('HTTP '+r.status);return JSON.parse(await r.text());}
   function money(n){n=+n||0;if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B vol';if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M vol';if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'k vol';return '$'+n.toFixed(0)+' vol';}
   function comp(n){n=+n||0;if(n>=1e6)return (n/1e6).toFixed(1)+'M';if(n>=1e3)return (n/1e3).toFixed(0)+'k';return n.toFixed(0);}
-  function pmParse(evs){return (evs||[]).map(function(e){var ms=e.markets||[],outs=[];for(var i=0;i<ms.length;i++){var m=ms[i];if(m.closed)continue;var pr;try{pr=JSON.parse(m.outcomePrices||'[]');}catch(x){continue;}if(!pr.length)continue;var y=parseFloat(pr[0]);if(!isFinite(y))continue;outs.push({l:ms.length>1?(m.groupItemTitle||m.question):'Oui',p:Math.round(y*1e4)/1e4});}if(outs.length>1){var ps=outs.map(function(o){return o.p;});var mn=Math.min.apply(null,ps),mx=Math.max.apply(null,ps),sm=ps.reduce(function(a,b){return a+b;},0);if(mx-mn<0.02||sm>1.8)return null;}outs=outs.filter(function(o){return !/^(person|candidate|outcome|team|option|choice|player|entrant|contestant)\s*([a-z]|\d{1,3})$/i.test(String(o.l).trim());});if(!outs.length)return null;outs.sort(function(a,b){return b.p-a.p;});return {s:'polymarket',t:e.title,u:e.slug?('https://polymarket.com/event/'+e.slug):'',e:e.endDate||'',v:+e.volume||0,m:money(+e.volume),o:outs.slice(0,6)};}).filter(Boolean);}
+  function pmParse(evs){return (evs||[]).map(function(e){var ms=e.markets||[],outs=[];for(var i=0;i<ms.length;i++){var m=ms[i];if(m.closed)continue;var pr;try{pr=JSON.parse(m.outcomePrices||'[]');}catch(x){continue;}if(!pr.length)continue;var y=parseFloat(pr[0]);if(!isFinite(y))continue;var tk=null;try{tk=JSON.parse(m.clobTokenIds||'[]')[0]||null;}catch(x2){}outs.push({l:ms.length>1?(m.groupItemTitle||m.question):'Oui',p:Math.round(y*1e4)/1e4,k:tk});}if(outs.length>1){var ps=outs.map(function(o){return o.p;});var mn=Math.min.apply(null,ps),mx=Math.max.apply(null,ps),sm=ps.reduce(function(a,b){return a+b;},0);if(mx-mn<0.02||sm>1.8)return null;}outs=outs.filter(function(o){return !/^(person|candidate|outcome|team|option|choice|player|entrant|contestant)\s*([a-z]|\d{1,3})$/i.test(String(o.l).trim());});if(!outs.length)return null;outs.sort(function(a,b){return b.p-a.p;});return {s:'polymarket',t:e.title,u:e.slug?('https://polymarket.com/event/'+e.slug):'',e:e.endDate||'',v:+e.volume||0,m:money(+e.volume),o:outs.slice(0,6)};}).filter(Boolean);}
   function manParse(arr){return (arr||[]).filter(function(m){return typeof m.probability==='number'&&!m.isResolved;}).map(function(m){return {s:'manifold',t:m.question,u:m.url,e:m.closeTime||'',v:+m.volume||0,m:'Ṁ'+comp(+m.volume||0),o:[{l:'Oui',p:Math.round(m.probability*1e4)/1e4}]};});}
   async function searchPM(q){var r=await fetch(JINA+'https://gamma-api.polymarket.com/public-search?q='+encodeURIComponent(q)+'&limit_per_type=25&events_status=active',{headers:{'x-respond-with':'text'}});if(!r.ok)throw new Error('HTTP '+r.status);var d=JSON.parse(await r.text());return pmParse((d&&d.events)||[]).sort(byV);}
   async function searchMan(q){var r=await fetch('https://api.manifold.markets/v0/search-markets?term='+encodeURIComponent(q)+'&limit=25&sort=liquidity&filter=open&contractType=BINARY');if(!r.ok)throw new Error('HTTP '+r.status);return manParse(await r.json());}
@@ -214,6 +255,53 @@
     searchMan(q).then(function(it){if(seq!==sseq)return;it=dedupe(it);laneRender('manifold',it,tr('noResult'));})
       .catch(function(){if(seq!==sseq)return;var f=collected('manifold',q);laneRender('manifold',f,tr('noResult'));});
   }
+
+  // ---- overlay : graphe des probabilités dans le temps ----
+  var ov=document.getElementById('ov'), ovBody=document.getElementById('ovbody'), ovChartSeq=0;
+  function shortDate(ms){try{return new Date(ms).toLocaleDateString(lang==='en'?'en-GB':'fr-FR',{day:'numeric',month:'short'});}catch(e){return '';}}
+  async function histPM(tok){var d=await jget('https://clob.polymarket.com/prices-history?market='+tok+'&interval=max&fidelity=1440');return (d.history||[]).map(function(x){return {t:x.t*1000,p:+x.p};}).filter(function(x){return isFinite(x.p);});}
+  async function histKalshi(series,tk){var end=Math.floor(Date.now()/1000),start=end-370*86400;var d=await jget('https://api.elections.kalshi.com/trade-api/v2/series/'+series+'/markets/'+tk+'/candlesticks?start_ts='+start+'&end_ts='+end+'&period_interval=1440');return (d.candlesticks||[]).map(function(c){var pr=c.price&&(c.price.close_dollars!=null?c.price.close_dollars:c.price.mean_dollars);return {t:c.end_period_ts*1000,p:pr==null?null:+pr};}).filter(function(x){return x.p!=null&&isFinite(x.p);});}
+  function drawChart(series,el){
+    var PAL=['#2f6bff','#e8552d','#12a150','#9333ea','#d4a017','#0ea5e9'];
+    var W=680,H=300,pl=34,pr=10,pt=12,pb=24,tmin=Infinity,tmax=-Infinity;
+    series.forEach(function(s){s.data.forEach(function(d){if(d.t<tmin)tmin=d.t;if(d.t>tmax)tmax=d.t;});});
+    if(!(tmax>tmin))tmax=tmin+86400000;
+    function X(t){return pl+(t-tmin)/(tmax-tmin)*(W-pl-pr);}
+    function Y(p){return pt+(1-Math.max(0,Math.min(1,p)))*(H-pt-pb);}
+    var svg='<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">';
+    [0,.25,.5,.75,1].forEach(function(g){var y=Y(g);svg+='<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" style="stroke:var(--border)" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(y+3)+'" text-anchor="end" style="fill:var(--muted);font:10px var(--mono)">'+Math.round(g*100)+'</text>';});
+    for(var i=0;i<=4;i++){var t=tmin+(tmax-tmin)*i/4,x=X(t);svg+='<text x="'+x+'" y="'+(H-6)+'" text-anchor="'+(i===0?'start':i===4?'end':'middle')+'" style="fill:var(--muted);font:10px var(--mono)">'+shortDate(t)+'</text>';}
+    series.forEach(function(s,idx){s.color=PAL[idx%PAL.length];var pts=s.data.map(function(d){return X(d.t).toFixed(1)+','+Y(d.p).toFixed(1);}).join(' ');svg+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';});
+    svg+='</svg>';
+    var leg='<div class="legend">'+series.map(function(s){var last=s.data[s.data.length-1];return '<span class="leg"><span class="sw" style="background:'+s.color+'"></span>'+esc(s.label)+'<span class="lv">'+Math.round(last.p*100)+'%</span></span>';}).join('')+'</div>';
+    el.innerHTML=svg+leg;
+  }
+  function closeChart(){ov.hidden=true;ovBody.innerHTML='';ovChartSeq++;}
+  async function openChart(it){
+    var seq=++ovChartSeq;
+    ov.setAttribute('data-source',it.s);
+    document.getElementById('ovsrc').textContent=it.s;
+    document.getElementById('ovtitle').textContent=it.t;
+    document.getElementById('ovfoot').textContent='';
+    ovBody.innerHTML='<div class="ovload">'+tr('chartLoading')+'</div>';
+    ov.hidden=false;
+    var outs=(it.o||[]).slice(0,5);
+    try{
+      var series=await Promise.all(outs.map(function(o){
+        var pr=it.s==='polymarket'&&o.k?histPM(o.k):(it.s==='kalshi'&&o.tk&&it.series?histKalshi(it.series,o.tk):Promise.resolve([]));
+        return pr.then(function(h){return {label:o.l,data:h};}).catch(function(){return {label:o.l,data:[]};});
+      }));
+      if(seq!==ovChartSeq)return;
+      series=series.filter(function(s){return s.data.length>1;});
+      if(!series.length){ovBody.innerHTML='<div class="ovload">'+tr('chartNone')+'</div>';return;}
+      drawChart(series,ovBody);
+      document.getElementById('ovfoot').textContent=tr('chartNote');
+    }catch(e){if(seq===ovChartSeq)ovBody.innerHTML='<div class="ovload">'+tr('chartErr')+'</div>';}
+  }
+  document.getElementById('ovbg').addEventListener('click',closeChart);
+  document.getElementById('ovclose').addEventListener('click',closeChart);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!ov.hidden)closeChart();});
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.ctitle');if(b&&REG[b.dataset.rid])openChart(REG[b.dataset.rid]);});
 
   // nav catégories
   var tabsEl=document.getElementById('tabs');
