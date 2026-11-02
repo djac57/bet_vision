@@ -128,7 +128,6 @@
   .ovctrl button:hover{color:var(--fg)}
   .ovctrl .ovshare{margin-left:auto;color:var(--src)}
   .ovctrl .ovshare:hover{color:var(--fg)}
-  .ovfoot:empty{display:none}
   .ovbody{min-height:220px}
   .chart{width:100%;height:auto;display:block}
   .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px}
@@ -136,7 +135,10 @@
   .leg .sw{width:14px;height:3px;flex:none}
   .leg .lv{color:var(--muted)}
   .ovload{font-family:var(--mono);font-size:12px;color:var(--muted);padding:70px 0;text-align:center}
-  .ovfoot{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:14px;border-top:1px solid var(--border);padding-top:10px}
+  .ovfoot{display:flex;align-items:center;gap:10px;margin-top:16px;border-top:1px solid var(--border);padding-top:12px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .ovfoot .ovlogo{width:18px;height:18px;fill:var(--fg);flex:none}
+  .ovfoot .ovbrand{color:var(--fg);font-weight:700;text-transform:uppercase;letter-spacing:.07em;font-size:10px}
+  .ovfoot .ovurl{margin-left:auto;letter-spacing:.04em}
 
   footer.foot{border-top:3px solid var(--rule);margin-top:12px;padding-top:12px;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
   footer.foot b{color:var(--fg)} footer.foot .mono{font-family:var(--mono)} footer.foot a{color:var(--accent)}
@@ -184,7 +186,11 @@
     </div>
     <div class="ovctrl" id="ovctrl"></div>
     <div class="ovbody" id="ovbody"></div>
-    <div class="ovfoot" id="ovfoot"></div>
+    <div class="ovfoot" id="ovfoot">
+      <svg class="ovlogo" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3.5" width="20" height="3.6" rx="1"/><rect x="2" y="10.2" width="13" height="3.6" rx="1"/><rect x="2" y="16.9" width="8" height="3.6" rx="1"/></svg>
+      <span class="ovbrand">Baromètre des paris</span>
+      <span class="ovurl">djac57.github.io/bet_vision</span>
+    </div>
   </div>
 </div>
 
@@ -305,13 +311,16 @@
     var cv=document.createElement('canvas');cv.width=CW*SC;cv.height=CH*SC;var g=cv.getContext('2d');g.scale(SC,SC);
     g.fillStyle=BG;g.fillRect(0,0,CW,CH);
     var M=56, L=M+34, R=CW-M, T=210, B=560;
-    // header
-    g.textBaseline='alphabetic';g.fillStyle=SRC;g.font="700 16px 'Space Mono', monospace";g.fillText(curItem.s.toUpperCase(),M,M+6);
+    // brand (haut-gauche) : logo + wordmark
+    g.textBaseline='alphabetic';g.fillStyle=FG;var lbw=[22,14,9];for(var bi=0;bi<3;bi++)g.fillRect(M,M-14+bi*6,lbw[bi],3.4);
+    g.font="700 14px 'Space Mono', monospace";g.fillText('BAROMÈTRE DES PARIS',M+32,M);
+    // source (haut-droite, discret)
+    g.fillStyle=SRC;g.font="700 13px 'Space Mono', monospace";g.textAlign='right';g.fillText(curItem.s.toUpperCase(),R,M);g.textAlign='left';
+    // titre
     g.fillStyle=FG;g.font="700 30px 'Space Mono', monospace";
     var title=curItem.t, maxw=CW-2*M; while(g.measureText(title).width>maxw&&title.length>8)title=title.slice(0,-2); if(title!==curItem.t)title=title.slice(0,-1)+'…';
-    g.fillText(title,M,M+46);
-    // title rule
-    g.strokeStyle=SRC;g.lineWidth=3;g.beginPath();g.moveTo(M,M+66);g.lineTo(R,M+66);g.stroke();
+    g.fillText(title,M,M+44);
+    g.strokeStyle=SRC;g.lineWidth=3;g.beginPath();g.moveTo(M,M+62);g.lineTo(R,M+62);g.stroke();
     // scales
     function X(t){return L+(t-lc.tmin)/((lc.tmax-lc.tmin)||1)*(R-L);}
     function Y(p){return T+(lc.hi-Math.max(lc.lo,Math.min(lc.hi,p)))/((lc.hi-lc.lo)||1)*(B-T);}
