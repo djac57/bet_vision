@@ -4,6 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Baromètre des paris</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%2317150f%27/%3E%3Crect%20x%3D%276%27%20y%3D%278%27%20width%3D%2720%27%20height%3D%273.6%27%20rx%3D%271.3%27%20fill%3D%27%23e8e6df%27/%3E%3Crect%20x%3D%276%27%20y%3D%2714.2%27%20width%3D%2713%27%20height%3D%273.6%27%20rx%3D%271.3%27%20fill%3D%27%23e8e6df%27/%3E%3Crect%20x%3D%276%27%20y%3D%2720.4%27%20width%3D%278%27%20height%3D%273.6%27%20rx%3D%271.3%27%20fill%3D%27%23e8e6df%27/%3E%3C/svg%3E">
+<meta name="description" content="Cotes des marchés de prédiction en direct (Polymarket, Kalshi, Manifold), accessible depuis la France. Live prediction-market odds — politics, crypto, sport & more.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Baromètre des paris · Betting Barometer">
+<meta property="og:description" content="Cotes des marchés de prédiction en direct · Live prediction-market odds — politics, crypto, sport & more">
+<meta property="og:url" content="https://djac57.github.io/bet_vision/">
+<meta property="og:image" content="https://djac57.github.io/bet_vision/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Baromètre des paris · Betting Barometer">
+<meta name="twitter:description" content="Cotes des marchés de prédiction en direct · Live prediction-market odds">
+<meta name="twitter:image" content="https://djac57.github.io/bet_vision/og.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap">
 <style>
   :root{
@@ -276,7 +289,7 @@
   }
 
   // ---- overlay : graphe des probabilités dans le temps ----
-  var ov=document.getElementById('ov'), ovBody=document.getElementById('ovbody'), ovChartSeq=0, curItem=null, curRange='all', lastChart=null;
+  var ov=document.getElementById('ov'), ovBody=document.getElementById('ovbody'), ovChartSeq=0, curItem=null, curRange='all', lastChart=null, shareBusy=false;
   function shortDate(ms){try{return new Date(ms).toLocaleDateString(lang==='en'?'en-GB':'fr-FR',{day:'numeric',month:'short'});}catch(e){return '';}}
   async function jhist(url){var last;for(var a=0;a<2;a++){try{return await jget(url);}catch(e){last=e;if(a===0)await new Promise(function(r){setTimeout(r,700);});}}throw last;}
   async function histPM(tok,range){var q=range==='1m'?'interval=1m&fidelity=60':'interval=max&fidelity=1440';var d=await jhist('https://clob.polymarket.com/prices-history?market='+tok+'&'+q);return (d.history||[]).map(function(x){return {t:x.t*1000,p:+x.p};}).filter(function(x){return isFinite(x.p);});}
@@ -305,7 +318,7 @@
   // ---- export image (partage) ----
   function cssv(n){try{return getComputedStyle(document.body).getPropertyValue(n).trim()||'#000';}catch(e){return '#000';}}
   function shareChart(){
-    if(!lastChart||!curItem)return;
+    if(!lastChart||!curItem||shareBusy)return;shareBusy=true;
     var lc=lastChart, SC=2, CW=1200, CH=720;
     var BG=cssv('--bg'),FG=cssv('--fg'),MU=cssv('--muted'),BD=cssv('--border'),SRC=cssv('--'+(curItem.s==='kalshi'?'kalshi':curItem.s==='manifold'?'manifold':'pm'));
     var cv=document.createElement('canvas');cv.width=CW*SC;cv.height=CH*SC;var g=cv.getContext('2d');g.scale(SC,SC);
@@ -339,9 +352,12 @@
     // footer : logo + url
     var fy=CH-54, bw=[26,17,11];g.fillStyle=FG;for(var k=0;k<3;k++)g.fillRect(M,fy+k*7,bw[k],4.6);
     g.fillStyle=MU;g.font="700 14px 'Space Mono', monospace";g.textBaseline='middle';g.fillText('djac57.github.io/bet_vision',M+36,fy+9);
-    cv.toBlob(function(blob){ if(!blob)return; var file=new File([blob],'bet_vision.png',{type:'image/png'});
-      if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:curItem.t}).catch(function(){});}
-      else{var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bet_vision.png';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href);},3000);}
+    cv.toBlob(function(blob){
+      var done=function(){setTimeout(function(){shareBusy=false;},700);};
+      if(!blob){shareBusy=false;return;}
+      var file=new File([blob],'bet_vision.png',{type:'image/png'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file]}).then(done,done);}
+      else{var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bet_vision.png';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href);},3000);done();}
     },'image/png');
   }
   function closeChart(){ov.hidden=true;ovBody.innerHTML='';ovChartSeq++;}
