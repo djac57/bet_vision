@@ -7,31 +7,34 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
   :root{
-    --bg:#f3f4f6; --surface:#ffffff; --surface-2:#eaecf1;
-    --fg:#1b1f27; --muted:#636b78; --border:#e2e5ec;
-    --accent:#3b5bdb;
-    --pm:#6c47d4; --kalshi:#0b9a6d; --manifold:#d97a00;
-    --warn:#b8690a; --bad:#c92a5a;
-    --shadow:0 1px 2px rgba(20,24,31,.06),0 2px 10px rgba(20,24,31,.045);
-    --r:12px;
+    --bg:#fafafa; --surface:#ffffff; --surface-2:#f1f1ef;
+    --fg:#17181b; --muted:#9a9ca1; --border:#ececea;
+    --accent:#3f4652;
+    --pm:#6a5acf; --kalshi:#12916a; --manifold:#c07a1e;
+    --track:#f0f0ee; --fill:rgba(20,22,26,.07);
+    --warn:#b8690a; --bad:#c0415f;
+    --shadow:none;
+    --r:9px;
     --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
     --head:'Archivo',var(--sans);
     --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-    --bg:#0e1014; --surface:#171a21; --surface-2:#232833;
-    --fg:#e7eaef; --muted:#959dac; --border:#262b35;
-    --accent:#6b86fa; --pm:#a284f5; --kalshi:#35c892; --manifold:#f1a13c;
-    --warn:#f1a13c; --bad:#ff7aa2;
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 2px 12px rgba(0,0,0,.25);
+    --bg:#0c0d10; --surface:#141519; --surface-2:#1c1e23;
+    --fg:#e8e9ec; --muted:#7c808a; --border:#232429;
+    --accent:#aeb4c0; --pm:#9d8bf0; --kalshi:#2fc091; --manifold:#e3a24a;
+    --track:#1c1e23; --fill:rgba(255,255,255,.07);
+    --warn:#e3a24a; --bad:#ff7aa2;
+    --shadow:none;
     color-scheme:dark;
   }}
   :root[data-theme="dark"]{
-    --bg:#0e1014; --surface:#171a21; --surface-2:#232833;
-    --fg:#e7eaef; --muted:#959dac; --border:#262b35;
-    --accent:#6b86fa; --pm:#a284f5; --kalshi:#35c892; --manifold:#f1a13c;
-    --warn:#f1a13c; --bad:#ff7aa2;
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 2px 12px rgba(0,0,0,.25);
+    --bg:#0c0d10; --surface:#141519; --surface-2:#1c1e23;
+    --fg:#e8e9ec; --muted:#7c808a; --border:#232429;
+    --accent:#aeb4c0; --pm:#9d8bf0; --kalshi:#2fc091; --manifold:#e3a24a;
+    --track:#1c1e23; --fill:rgba(255,255,255,.07);
+    --warn:#e3a24a; --bad:#ff7aa2;
+    --shadow:none;
     color-scheme:dark;
   }
   *{box-sizing:border-box}
@@ -42,10 +45,7 @@
 
   .topbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--border);padding-block:11px;margin-bottom:18px}
   .brand{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-  h1{font-family:var(--head);font-weight:700;font-size:20px;letter-spacing:-.01em;margin:0;line-height:1.1}
-  .tagline{color:var(--muted);font-size:12.5px;margin-top:3px}
-  .toolright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .stamp{font-family:var(--mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  h1{font-family:var(--head);font-weight:600;font-size:18px;letter-spacing:-.02em;margin:0;line-height:1.1}
   .btn{font-family:var(--sans);font-weight:600;font-size:13px;color:var(--fg);background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:7px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:var(--shadow)}
   .btn:hover{border-color:var(--accent)}
   .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -72,27 +72,24 @@
 
   .lane{margin-bottom:28px}
   .lane[hidden]{display:none}
-  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--src)}
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid var(--border)}
   .lane[data-source="polymarket"]{--src:var(--pm)} .lane[data-source="kalshi"]{--src:var(--kalshi)} .lane[data-source="manifold"]{--src:var(--manifold)}
-  .sec-head h2{font-family:var(--head);font-weight:600;font-size:17px;margin:0;display:flex;align-items:center;gap:9px}
-  .sec-head h2 .sq{width:11px;height:11px;border-radius:3px;background:var(--src)}
-  .sec-sub{color:var(--muted);font-size:12px;font-weight:400;margin-left:4px}
-  .sec-status{font-family:var(--mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .sec-status.err{color:var(--bad)}
+  .sec-head h2{font-family:var(--head);font-weight:600;font-size:14px;letter-spacing:.01em;margin:0;display:flex;align-items:center;gap:8px;text-transform:uppercase}
+  .sec-head h2 .sq{width:7px;height:7px;border-radius:2px;background:var(--src)}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:14px}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px 11px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:9px;min-width:0}
   .card[data-source="polymarket"]{--src:var(--pm)} .card[data-source="kalshi"]{--src:var(--kalshi)} .card[data-source="manifold"]{--src:var(--manifold)}
   .card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .badge{font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--src);background:color-mix(in srgb,var(--src) 12%,transparent);border:1px solid color-mix(in srgb,var(--src) 30%,transparent);padding:3px 8px;border-radius:999px}
+  .badge{font-family:var(--mono);font-weight:600;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--src)}
   .vol{font-family:var(--mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
   .card-title{font-family:var(--head);font-weight:600;font-size:14.5px;line-height:1.28;margin:0;text-wrap:balance;color:var(--fg)}
   a.card-title{text-decoration:none} a.card-title:hover{text-decoration:underline;text-decoration-color:var(--src)}
   .outcomes{display:flex;flex-direction:column;gap:5px;margin-top:1px}
   .oc{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
-  .oc-track{position:relative;height:25px;background:var(--surface-2);border-radius:6px;overflow:hidden;display:flex;align-items:center;min-width:0}
-  .oc-fill{position:absolute;top:0;left:0;bottom:0;background:color-mix(in srgb,var(--src) 20%,transparent)}
-  .oc.lead .oc-fill{background:color-mix(in srgb,var(--src) 36%,transparent)}
+  .oc-track{position:relative;height:22px;background:var(--track);border-radius:4px;overflow:hidden;display:flex;align-items:center;min-width:0}
+  .oc-fill{position:absolute;top:0;left:0;bottom:0;background:var(--fill)}
+  .oc.lead .oc-fill{background:color-mix(in srgb,var(--src) 22%,transparent)}
   .oc-label{position:relative;z-index:1;padding:0 9px;font-size:12.5px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .oc-pct{font-family:var(--mono);font-size:12.5px;color:var(--fg);font-variant-numeric:tabular-nums;text-align:right;min-width:2.9em}
   .oc.lead .oc-pct{color:var(--src);font-weight:600}
@@ -108,14 +105,8 @@
 <div class="wrap">
   <header class="topbar">
     <div class="brand">
-      <div>
-        <h1>Baromètre des paris</h1>
-        <div class="tagline">Cotes des marchés de prédiction, toutes catégories — collectées côté serveur, lisibles depuis la France.</div>
-      </div>
-      <div class="toolright">
-        <span class="stamp" id="stamp">—</span>
-        <button class="btn" id="refresh" type="button"><span class="ico">↻</span> Rafraîchir</button>
-      </div>
+      <h1>Baromètre des paris</h1>
+      <button class="btn" id="refresh" type="button"><span class="ico">↻</span> Rafraîchir</button>
     </div>
     <div class="tabs" id="tabs" role="tablist"></div>
     <div class="controls">
@@ -127,22 +118,19 @@
   </header>
 
   <section class="lane" data-source="polymarket" id="sec-polymarket">
-    <div class="sec-head"><h2><span class="sq"></span>Polymarket <span class="sec-sub">dollars réels</span></h2><span class="sec-status">…</span></div>
+    <div class="sec-head"><h2><span class="sq"></span>Polymarket</h2></div>
     <div class="grid"></div>
   </section>
   <section class="lane" data-source="kalshi" id="sec-kalshi">
-    <div class="sec-head"><h2><span class="sq"></span>Kalshi <span class="sec-sub">dollars réels</span></h2><span class="sec-status">…</span></div>
+    <div class="sec-head"><h2><span class="sq"></span>Kalshi</h2></div>
     <div class="grid"></div>
   </section>
   <section class="lane" data-source="manifold" id="sec-manifold">
-    <div class="sec-head"><h2><span class="sq"></span>Manifold <span class="sec-sub">monnaie fictive (Ṁ)</span></h2><span class="sec-status">…</span></div>
+    <div class="sec-head"><h2><span class="sq"></span>Manifold</h2></div>
     <div class="grid"></div>
   </section>
 
-  <footer class="foot">
-    <div><b>Kalshi</b> et <b>Manifold</b> sont collectés 2×/jour par un robot GitHub Actions (hors France) dans <span class="mono">data.json</span>, que cette page lit. <b>Polymarket</b> est chargé en direct depuis ton navigateur via le proxy <span class="mono">r.jina.ai</span> (son API bloque les IP datacenter du robot, mais pas ton IP). Rien n'est bloqué côté France.</div>
-    <div style="margin-top:7px">Polymarket et Kalshi sont en dollars réels ; Manifold est en monnaie fictive (Ṁ), à lire comme un sondage. Un pourcentage est la probabilité implicite « Oui ». Les onglets montrent le haut du volume / intérêt ouvert par catégorie. La <b>recherche interroge le catalogue en direct</b> : Polymarket et Manifold en temps réel, Kalshi sur l'instantané (il n'a pas de recherche texte et couvre peu la politique hors USA). Cotes indicatives — pas un conseil d'investissement.</div>
-  </footer>
+  <footer class="foot">cotes indicatives pour recherche uniquement, pas un conseil d'investissement</footer>
 </div>
 
 <script>
@@ -167,9 +155,8 @@
   }
   function laneRender(src,items,label){
     document.querySelector('#sec-'+src+' .grid').innerHTML=items.length?items.map(cardHTML).join(''):'<div class="empty">'+(label||'Aucun marché.')+'</div>';
-    document.querySelector('#sec-'+src+' .sec-sub').textContent=SUB[src];
   }
-  function setStatus(src,text,cls){var el=document.querySelector('#sec-'+src+' .sec-status');el.textContent=text;el.className='sec-status'+(cls?' '+cls:'');}
+  function setStatus(){}
 
   function bySrc(items){var g={polymarket:[],kalshi:[],manifold:[]};items.forEach(function(x){if(g[x.s])g[x.s].push(x);});return g;}
 
@@ -217,7 +204,7 @@
     var seq=++sseq;
     document.querySelector('#sec-polymarket .grid').innerHTML='<div class="empty">Recherche en direct…</div>';setStatus('polymarket','recherche…');
     document.querySelector('#sec-manifold .grid').innerHTML='<div class="empty">Recherche en direct…</div>';setStatus('manifold','recherche…');
-    var k=collected('kalshi',q);laneRender('kalshi',k,'Aucun résultat (Kalshi couvre peu la politique hors USA).');setStatus('kalshi',k.length+' · collecté');
+    var k=collected('kalshi',q);laneRender('kalshi',k,'Aucun résultat.');
     searchPM(q).then(function(it){if(seq!==sseq)return;it=dedupe(it);laneRender('polymarket',it,'Aucun résultat.');setStatus('polymarket',it.length+' · en direct');})
       .catch(function(){if(seq!==sseq)return;var f=collected('polymarket',q);laneRender('polymarket',f,'Aucun résultat.');setStatus('polymarket',f.length+' · collecté','err');});
     searchMan(q).then(function(it){if(seq!==sseq)return;it=dedupe(it);laneRender('manifold',it,'Aucun résultat.');setStatus('manifold',it.length+' · en direct');})
@@ -242,10 +229,8 @@
       var r=await fetch('data.json'+(bust?('?t='+Date.now()):''),{cache:bust?'reload':'default'});
       if(!r.ok)throw new Error('HTTP '+r.status);
       DATA=prep(await r.json());
-      document.getElementById('stamp').textContent=fmtStamp(DATA.generated);
     }catch(e){
-      if(!DATA){SOURCES.forEach(function(s){setStatus(s,'erreur','err');});document.querySelector('#sec-polymarket .grid').innerHTML='<div class="empty">Pas encore de données — le robot GitHub Actions n’a pas encore tourné, ou <span class="mono">data.json</span> est absent. Relance le workflow « Update odds » dans l’onglet Actions.</div>';}
-      document.getElementById('stamp').textContent='hors-ligne';
+      if(!DATA)DATA={all:[],sources:{}};
     }
     if(query.length>=2)runSearch(query);else render();
     btn.classList.remove('busy');btn.disabled=false;
