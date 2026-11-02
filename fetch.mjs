@@ -41,9 +41,9 @@ function pmItems(evs, cat) {
       const y = parseFloat(pr[0]); if (!isFinite(y)) continue;
       outs.push({ l: ms.length > 1 ? (m.groupItemTitle || m.question) : 'Oui', p: r4(y) });
     }
-    outs = outs.filter(o => !/^(person|candidate|outcome|team|option)\s*\d+$/i.test(String(o.l).trim()));
+    if (outs.length > 1) { const ps = outs.map(o => o.p); const sm = ps.reduce((a, b) => a + b, 0); if (Math.max(...ps) - Math.min(...ps) < 0.02 || sm > 1.8) return null; } // non tradé / non normalisé
+    outs = outs.filter(o => !/^(person|candidate|outcome|team|option|choice|player|entrant|contestant)\s*([a-z]|\d{1,3})$/i.test(String(o.l).trim()));
     if (!outs.length) return null;
-    if (outs.length > 1) { const ps = outs.map(o => o.p); if (Math.max(...ps) - Math.min(...ps) < 0.01) return null; } // marché non tradé (tous au même prix)
     outs.sort((a, b) => b.p - a.p);
     return { s: 'polymarket', t: e.title, u: e.slug ? 'https://polymarket.com/event/' + e.slug : '', e: e.endDate || '', c: cat, v: +e.volume || 0, m: money(+e.volume), o: outs.slice(0, 6) };
   }).filter(Boolean);

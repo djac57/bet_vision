@@ -44,6 +44,12 @@
   .btn.busy .ico{animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   @media (prefers-reduced-motion:reduce){.btn.busy .ico{animation:none}}
+  .tools{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+  .lang{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.09em}
+  .lang button{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:var(--muted);text-transform:uppercase}
+  .lang button[aria-pressed="true"]{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+  .lang button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .lang .sep{color:var(--border)}
 
   /* Nav de catégories — collante, slim (remplace les onglets-pilules) */
   .navbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:2px solid var(--rule)}
@@ -105,7 +111,10 @@
 <div class="wrap">
   <header class="masthead">
     <h1>Baromètre des paris</h1>
-    <button class="btn" id="refresh" type="button"><span class="ico">↻</span> Rafraîchir</button>
+    <div class="tools">
+      <div class="lang" id="lang"><button type="button" data-lang="fr" aria-pressed="true">FR</button><span class="sep">/</span><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
+      <button class="btn" id="refresh" type="button"><span class="ico">↻</span> <span id="reftxt">Rafraîchir</span></button>
+    </div>
   </header>
   <nav class="navbar"><div class="tabs" id="tabs" role="tablist"></div></nav>
   <div class="controls">
@@ -136,15 +145,22 @@
   var pmLive={}, pmSeq=0;
   var SOURCES=['polymarket','kalshi','manifold'];
   var DATA=null, active='trending', query='';
+  var T={
+    fr:{title:'Baromètre des paris',refresh:'Rafraîchir',searchPh:'Rechercher dans tout le catalogue (ex. le pen, bitcoin, super bowl)…',resolution:'Résolution',loading:'Chargement…',loadingLive:'Chargement en direct…',searchingLive:'Recherche en direct…',noMarket:'Aucun marché dans cette catégorie.',noResult:'Aucun résultat.',srcUnavail:'Source indisponible à la dernière collecte.',pmUnavail:'Polymarket indisponible — réessaie « Rafraîchir ».',footer:'cotes indicatives pour recherche uniquement, pas un conseil d’investissement',cats:{trending:'Tendances',politique:'Politique',crypto:'Crypto',sport:'Sport',eco:'Éco & Finance',culture:'Culture',monde:'Monde',tech:'Tech & Science'}},
+    en:{title:'Betting Barometer',refresh:'Refresh',searchPh:'Search the whole catalogue (e.g. le pen, bitcoin, super bowl)…',resolution:'Resolves',loading:'Loading…',loadingLive:'Loading live…',searchingLive:'Searching live…',noMarket:'No markets in this category.',noResult:'No results.',srcUnavail:'Source unavailable at last collection.',pmUnavail:'Polymarket unavailable — try Refresh.',footer:'odds for research only, not investment advice',cats:{trending:'Trending',politique:'Politics',crypto:'Crypto',sport:'Sports',eco:'Econ & Finance',culture:'Culture',monde:'World',tech:'Tech & Science'}}
+  };
+  var lang='fr';try{lang=localStorage.getItem('lang')||((navigator.language||'').slice(0,2)==='en'?'en':'fr');}catch(e){}
+  function tr(k){return (T[lang]||T.fr)[k];}
+  function catLabel(k){return (T[lang]||T.fr).cats[k];}
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-  function fmtDate(d){if(d==null||d==='')return '';var t=typeof d==='number'?d:Date.parse(d);if(!isFinite(t))return '';try{return new Date(t).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});}catch(e){return '';}}
+  function fmtDate(d){if(d==null||d==='')return '';var t=typeof d==='number'?d:Date.parse(d);if(!isFinite(t))return '';try{return new Date(t).toLocaleDateString(lang==='en'?'en-GB':'fr-FR',{day:'numeric',month:'short',year:'numeric'});}catch(e){return '';}}
 
   function cardHTML(it){
     var titleHTML=it.u?'<a class="card-title" href="'+esc(it.u)+'" target="_blank" rel="noopener">'+esc(it.t)+'</a>':'<h3 class="card-title">'+esc(it.t)+'</h3>';
     var rows=(it.o||[]).map(function(o,i){var w=Math.max(2,Math.min(100,Math.round(o.p*100)));return '<div class="oc'+(i===0?' lead':'')+'"><div class="oc-track"><div class="oc-fill" style="width:'+w+'%"></div><span class="oc-label" title="'+esc(o.l)+'">'+esc(o.l)+'</span></div><span class="oc-pct">'+Math.round(o.p*100)+'%</span></div>';}).join('');
     var end=fmtDate(it.e);
-    return '<article class="card" data-source="'+esc(it.s)+'"><header class="card-head"><span class="badge">'+esc(it.s)+'</span><span class="vol">'+esc(it.m||'')+'</span></header>'+titleHTML+'<div class="outcomes">'+rows+'</div>'+(end?'<footer class="card-foot">Résolution '+end+'</footer>':'')+'</article>';
+    return '<article class="card" data-source="'+esc(it.s)+'"><header class="card-head"><span class="badge">'+esc(it.s)+'</span><span class="vol">'+esc(it.m||'')+'</span></header>'+titleHTML+'<div class="outcomes">'+rows+'</div>'+(end?'<footer class="card-foot">'+tr('resolution')+' '+end+'</footer>':'')+'</article>';
   }
   function laneRender(src,items,label){
     document.querySelector('#sec-'+src+' .grid').innerHTML=items.length?items.map(cardHTML).join(''):'<div class="empty">'+(label||'Aucun marché.')+'</div>';
@@ -158,23 +174,23 @@
 
   // ---- vue par catégorie (sur l'instantané collecté) ----
   function render(){
-    if(!DATA){SOURCES.forEach(function(s){document.querySelector('#sec-'+s+' .grid').innerHTML='<div class="empty">Chargement…</div>';});return;}
+    if(!DATA){SOURCES.forEach(function(s){document.querySelector('#sec-'+s+' .grid').innerHTML='<div class="empty">'+tr('loading')+'</div>';});return;}
     if(query.length>=2)return; // la recherche est gérée en direct par runSearch()
     var pool=active==='trending'?dedupe(DATA.all):DATA.all.filter(function(x){return x.c===active;});
     var g=bySrc(pool);
     ['kalshi','manifold'].forEach(function(s){
       var arr=g[s].slice().sort(byV).slice(0,40);
       var srcOk=!DATA.sources||!DATA.sources[s]||DATA.sources[s].ok;
-      laneRender(s,arr,srcOk?'Aucun marché dans cette catégorie.':'Source indisponible à la dernière collecte.');
+      laneRender(s,arr,srcOk?tr('noMarket'):tr('srcUnavail'));
     });
     renderPMcat(active);
   }
   function renderPMcat(cat){
-    if(pmLive[cat]){laneRender('polymarket',pmLive[cat],'Aucun marché dans cette catégorie.');return;}
-    document.querySelector('#sec-polymarket .grid').innerHTML='<div class="empty">Chargement en direct…</div>';
+    if(pmLive[cat]){laneRender('polymarket',pmLive[cat],tr('noMarket'));return;}
+    document.querySelector('#sec-polymarket .grid').innerHTML='<div class="empty">'+tr('loadingLive')+'</div>';
     var seq=++pmSeq, c=cat;
-    loadPMcat(c).then(function(it){pmLive[c]=it;try{localStorage.setItem('pm_'+c,JSON.stringify(it));}catch(e){}if(c!==active||seq!==pmSeq||query.length>=2)return;laneRender('polymarket',it,'Aucun marché dans cette catégorie.');})
-    .catch(function(){if(c!==active||seq!==pmSeq||query.length>=2)return;var f=DATA.all.filter(function(x){return x.s==='polymarket'&&x.c===c;}).sort(byV).slice(0,40);if(!f.length){try{f=JSON.parse(localStorage.getItem('pm_'+c))||[];}catch(e){f=[];}}laneRender('polymarket',f,'Polymarket indisponible — réessaie « Rafraîchir ».');});
+    loadPMcat(c).then(function(it){pmLive[c]=it;try{localStorage.setItem('pm_'+c,JSON.stringify(it));}catch(e){}if(c!==active||seq!==pmSeq||query.length>=2)return;laneRender('polymarket',it,tr('noMarket'));})
+    .catch(function(){if(c!==active||seq!==pmSeq||query.length>=2)return;var f=DATA.all.filter(function(x){return x.s==='polymarket'&&x.c===c;}).sort(byV).slice(0,40);if(!f.length){try{f=JSON.parse(localStorage.getItem('pm_'+c))||[];}catch(e){f=[];}}laneRender('polymarket',f,tr('pmUnavail'));});
   }
   async function loadPMcat(cat){var base='https://gamma-api.polymarket.com/events?closed=false&limit=24&order=volume24hr&ascending=false';var url=cat==='trending'?base:base+'&tag_slug='+catSlug(cat);var d=await jget(url);return pmParse(d).sort(byV).slice(0,40);}
 
@@ -183,26 +199,28 @@
   async function jget(url){var r=await fetch(JINA+url,{headers:{'x-respond-with':'text'}});if(!r.ok)throw new Error('HTTP '+r.status);return JSON.parse(await r.text());}
   function money(n){n=+n||0;if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B vol';if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M vol';if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'k vol';return '$'+n.toFixed(0)+' vol';}
   function comp(n){n=+n||0;if(n>=1e6)return (n/1e6).toFixed(1)+'M';if(n>=1e3)return (n/1e3).toFixed(0)+'k';return n.toFixed(0);}
-  function pmParse(evs){return (evs||[]).map(function(e){var ms=e.markets||[],outs=[];for(var i=0;i<ms.length;i++){var m=ms[i];if(m.closed)continue;var pr;try{pr=JSON.parse(m.outcomePrices||'[]');}catch(x){continue;}if(!pr.length)continue;var y=parseFloat(pr[0]);if(!isFinite(y))continue;outs.push({l:ms.length>1?(m.groupItemTitle||m.question):'Oui',p:Math.round(y*1e4)/1e4});}outs=outs.filter(function(o){return !/^(person|candidate|outcome|team|option)\s*\d+$/i.test(String(o.l).trim());});if(!outs.length)return null;if(outs.length>1){var ps=outs.map(function(o){return o.p;});if(Math.max.apply(null,ps)-Math.min.apply(null,ps)<0.01)return null;}outs.sort(function(a,b){return b.p-a.p;});return {s:'polymarket',t:e.title,u:e.slug?('https://polymarket.com/event/'+e.slug):'',e:e.endDate||'',v:+e.volume||0,m:money(+e.volume),o:outs.slice(0,6)};}).filter(Boolean);}
+  function pmParse(evs){return (evs||[]).map(function(e){var ms=e.markets||[],outs=[];for(var i=0;i<ms.length;i++){var m=ms[i];if(m.closed)continue;var pr;try{pr=JSON.parse(m.outcomePrices||'[]');}catch(x){continue;}if(!pr.length)continue;var y=parseFloat(pr[0]);if(!isFinite(y))continue;outs.push({l:ms.length>1?(m.groupItemTitle||m.question):'Oui',p:Math.round(y*1e4)/1e4});}if(outs.length>1){var ps=outs.map(function(o){return o.p;});var mn=Math.min.apply(null,ps),mx=Math.max.apply(null,ps),sm=ps.reduce(function(a,b){return a+b;},0);if(mx-mn<0.02||sm>1.8)return null;}outs=outs.filter(function(o){return !/^(person|candidate|outcome|team|option|choice|player|entrant|contestant)\s*([a-z]|\d{1,3})$/i.test(String(o.l).trim());});if(!outs.length)return null;outs.sort(function(a,b){return b.p-a.p;});return {s:'polymarket',t:e.title,u:e.slug?('https://polymarket.com/event/'+e.slug):'',e:e.endDate||'',v:+e.volume||0,m:money(+e.volume),o:outs.slice(0,6)};}).filter(Boolean);}
   function manParse(arr){return (arr||[]).filter(function(m){return typeof m.probability==='number'&&!m.isResolved;}).map(function(m){return {s:'manifold',t:m.question,u:m.url,e:m.closeTime||'',v:+m.volume||0,m:'Ṁ'+comp(+m.volume||0),o:[{l:'Oui',p:Math.round(m.probability*1e4)/1e4}]};});}
   async function searchPM(q){var r=await fetch(JINA+'https://gamma-api.polymarket.com/public-search?q='+encodeURIComponent(q)+'&limit_per_type=25&events_status=active',{headers:{'x-respond-with':'text'}});if(!r.ok)throw new Error('HTTP '+r.status);var d=JSON.parse(await r.text());return pmParse((d&&d.events)||[]).sort(byV);}
   async function searchMan(q){var r=await fetch('https://api.manifold.markets/v0/search-markets?term='+encodeURIComponent(q)+'&limit=25&sort=liquidity&filter=open&contractType=BINARY');if(!r.ok)throw new Error('HTTP '+r.status);return manParse(await r.json());}
   function collected(src,q){return DATA?dedupe(DATA.all.filter(function(x){return x.s===src&&x._h.indexOf(q)>=0;}).sort(byV)):[];}
   function runSearch(q){
     var seq=++sseq;
-    document.querySelector('#sec-polymarket .grid').innerHTML='<div class="empty">Recherche en direct…</div>';
-    document.querySelector('#sec-manifold .grid').innerHTML='<div class="empty">Recherche en direct…</div>';
-    var k=collected('kalshi',q);laneRender('kalshi',k,'Aucun résultat.');
-    searchPM(q).then(function(it){if(seq!==sseq)return;it=dedupe(it);laneRender('polymarket',it,'Aucun résultat.');})
-      .catch(function(){if(seq!==sseq)return;var f=collected('polymarket',q);laneRender('polymarket',f,'Aucun résultat.');});
-    searchMan(q).then(function(it){if(seq!==sseq)return;it=dedupe(it);laneRender('manifold',it,'Aucun résultat.');})
-      .catch(function(){if(seq!==sseq)return;var f=collected('manifold',q);laneRender('manifold',f,'Aucun résultat.');});
+    document.querySelector('#sec-polymarket .grid').innerHTML='<div class="empty">'+tr('searchingLive')+'</div>';
+    document.querySelector('#sec-manifold .grid').innerHTML='<div class="empty">'+tr('searchingLive')+'</div>';
+    var k=collected('kalshi',q);laneRender('kalshi',k,tr('noResult'));
+    searchPM(q).then(function(it){if(seq!==sseq)return;it=dedupe(it);laneRender('polymarket',it,tr('noResult'));})
+      .catch(function(){if(seq!==sseq)return;var f=collected('polymarket',q);laneRender('polymarket',f,tr('noResult'));});
+    searchMan(q).then(function(it){if(seq!==sseq)return;it=dedupe(it);laneRender('manifold',it,tr('noResult'));})
+      .catch(function(){if(seq!==sseq)return;var f=collected('manifold',q);laneRender('manifold',f,tr('noResult'));});
   }
 
   // nav catégories
   var tabsEl=document.getElementById('tabs');
-  CATS.forEach(function(c){var b=document.createElement('button');b.className='tab';b.textContent=c[1];b.dataset.cat=c[0];b.setAttribute('role','tab');b.setAttribute('aria-selected',c[0]===active?'true':'false');b.addEventListener('click',function(){active=c[0];query='';sseq++;document.getElementById('q').value='';updateTabs();render();});tabsEl.appendChild(b);});
+  CATS.forEach(function(c){var b=document.createElement('button');b.className='tab';b.textContent=catLabel(c[0]);b.dataset.cat=c[0];b.setAttribute('role','tab');b.setAttribute('aria-selected',c[0]===active?'true':'false');b.addEventListener('click',function(){active=c[0];query='';sseq++;document.getElementById('q').value='';updateTabs();render();});tabsEl.appendChild(b);});
   function updateTabs(){Array.prototype.forEach.call(tabsEl.children,function(b){b.setAttribute('aria-selected',b.dataset.cat===active?'true':'false');});}
+  function applyStatic(){var t=T[lang]||T.fr;document.querySelector('h1').textContent=t.title;document.getElementById('reftxt').textContent=t.refresh;document.getElementById('q').placeholder=t.searchPh;document.querySelector('.foot').textContent=t.footer;Array.prototype.forEach.call(tabsEl.children,function(b){b.textContent=t.cats[b.dataset.cat];});Array.prototype.forEach.call(document.querySelectorAll('#lang button'),function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});try{document.documentElement.lang=lang;}catch(e){}}
+  Array.prototype.forEach.call(document.querySelectorAll('#lang button'),function(b){b.addEventListener('click',function(){lang=b.dataset.lang;try{localStorage.setItem('lang',lang);}catch(e){}applyStatic();if(query.length>=2)runSearch(query);else render();});});
 
   // recherche
   var dq;document.getElementById('q').addEventListener('input',function(e){query=e.target.value.trim().toLowerCase();clearTimeout(dq);if(query.length>=2){dq=setTimeout(function(){runSearch(query);},300);}else{sseq++;dq=setTimeout(render,100);}});
@@ -224,9 +242,11 @@
   }
   btn.addEventListener('click',function(){pmLive={};pmSeq++;loadData(true);});
 
+  applyStatic();
   render();
   loadData(false);
 })();
 </script>
+<script data-goatcounter="https://ukraine-map.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
