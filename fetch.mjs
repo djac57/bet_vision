@@ -27,6 +27,17 @@ async function getJSON(url) {
     } catch (e) { if (a === 2) throw e; await new Promise(res => setTimeout(res, 1500)); }
   }
 }
+// Polymarket (Cloudflare) bloque les IP datacenter de GitHub : on passe par le proxy jina,
+// qui récupère depuis ses propres IP et renvoie le JSON brut.
+async function jget(url) {
+  for (let a = 0; a < 3; a++) {
+    try {
+      const r = await fetch('https://r.jina.ai/' + url, { headers: { 'x-respond-with': 'text', 'user-agent': UA.headers['user-agent'] } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return JSON.parse(await r.text());
+    } catch (e) { if (a === 2) throw e; await new Promise(res => setTimeout(res, 2000)); }
+  }
+}
 const r4 = n => Math.round(n * 1e4) / 1e4;
 function money(n){ n=+n||0; if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B vol'; if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M vol'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'k vol'; return '$'+n.toFixed(0)+' vol'; }
 function comp(n){ n=+n||0; if(n>=1e6)return (n/1e6).toFixed(1)+'M'; if(n>=1e3)return (n/1e3).toFixed(0)+'k'; return n.toFixed(0); }
@@ -70,15 +81,16 @@ async function run() {
   const all = [];
   const sources = { polymarket: { ok: false, n: 0 }, kalshi: { ok: false, n: 0 }, manifold: { ok: false, n: 0 } };
 
-  // Polymarket — une requête par catégorie (classées par volume 24 h)
-  try {
-    for (const c of CATS) {
-      const evs = await getJSON(`https://gamma-api.polymarket.com/events?closed=false&limit=60&order=volume24hr&ascending=false&tag_slug=${c.pm}`);
+  // Polymarket — une requête par catégorie (via jina), résiliente : une catégorie en échec
+  // ne tue pas les autres.
+  for (const c of CATS) {
+    try {
+      const evs = await jget(`https://gamma-api.polymarket.com/events?closed=false&limit=60&order=volume24hr&ascending=false&tag_slug=${c.pm}`);
       const items = pmItems(evs, c.key).slice(0, 45);
       all.push(...items); sources.polymarket.n += items.length;
-    }
-    sources.polymarket.ok = true;
-  } catch (e) { console.error('Polymarket:', e.message); }
+    } catch (e) { console.error('Polymarket', c.key, e.message); }
+  }
+  sources.polymarket.ok = sources.polymarket.n > 0;
 
   // Kalshi — pagination au curseur, réparti dans les onglets
   try {
