@@ -140,15 +140,17 @@
   </section>
 
   <footer class="foot">
-    <div>Cotes de <b>Polymarket</b>, <b>Kalshi</b> et <b>Manifold</b>. Un robot GitHub Actions (hors France) interroge les API toutes les 12 h et écrit <span class="mono">data.json</span> dans ce dépôt ; cette page lit ce fichier — aucun appel externe depuis ton navigateur, donc rien n'est bloqué. Le bouton Rafraîchir recharge <span class="mono">data.json</span> (il change quand le robot repasse).</div>
-    <div style="margin-top:7px">Polymarket et Kalshi sont en dollars réels ; Manifold est en monnaie fictive (Ṁ), à lire comme un sondage. Un pourcentage est la probabilité implicite « Oui ». Les onglets montrent le haut du volume / intérêt ouvert par catégorie (instantané collecté). La <b>recherche interroge le catalogue en direct</b> : Polymarket (via le proxy jina) et Manifold en temps réel, Kalshi sur l'instantané (il n'a pas de recherche texte et couvre peu la politique hors USA). Cotes indicatives — pas un conseil d'investissement.</div>
+    <div><b>Kalshi</b> et <b>Manifold</b> sont collectés 2×/jour par un robot GitHub Actions (hors France) dans <span class="mono">data.json</span>, que cette page lit. <b>Polymarket</b> est chargé en direct depuis ton navigateur via le proxy <span class="mono">r.jina.ai</span> (son API bloque les IP datacenter du robot, mais pas ton IP). Rien n'est bloqué côté France.</div>
+    <div style="margin-top:7px">Polymarket et Kalshi sont en dollars réels ; Manifold est en monnaie fictive (Ṁ), à lire comme un sondage. Un pourcentage est la probabilité implicite « Oui ». Les onglets montrent le haut du volume / intérêt ouvert par catégorie. La <b>recherche interroge le catalogue en direct</b> : Polymarket et Manifold en temps réel, Kalshi sur l'instantané (il n'a pas de recherche texte et couvre peu la politique hors USA). Cotes indicatives — pas un conseil d'investissement.</div>
   </footer>
 </div>
 
 <script>
 (function(){
   "use strict";
-  var CATS=[['politique','Politique'],['crypto','Crypto'],['sport','Sport'],['eco','Éco & Finance'],['culture','Culture'],['monde','Monde'],['tech','Tech & Science']];
+  var CATS=[['politique','Politique','politics'],['crypto','Crypto','crypto'],['sport','Sport','sports'],['eco','Éco & Finance','economy'],['culture','Culture','pop-culture'],['monde','Monde','world'],['tech','Tech & Science','tech']];
+  function catSlug(k){for(var i=0;i<CATS.length;i++)if(CATS[i][0]===k)return CATS[i][2];return k;}
+  var pmLive={}, pmSeq=0;
   var SOURCES=['polymarket','kalshi','manifold'];
   var SUB={polymarket:'dollars réels',kalshi:'dollars réels',manifold:'monnaie fictive (Ṁ)'};
   var DATA=null, active='politique', query='';
@@ -178,20 +180,32 @@
   function render(){
     if(!DATA){SOURCES.forEach(function(s){setStatus(s,'…');document.querySelector('#sec-'+s+' .grid').innerHTML='<div class="empty">Chargement…</div>';});return;}
     if(query.length>=2)return; // la recherche est gérée en direct par runSearch()
+    // Kalshi + Manifold : depuis l'instantané collecté (data.json)
     var g=bySrc(DATA.all.filter(function(x){return x.c===active;}));
-    SOURCES.forEach(function(s){
+    ['kalshi','manifold'].forEach(function(s){
       var arr=g[s].slice().sort(byV).slice(0,40);
       var srcOk=!DATA.sources||!DATA.sources[s]||DATA.sources[s].ok;
       laneRender(s,arr,srcOk?'Aucun marché dans cette catégorie.':'Source indisponible à la dernière collecte.');
       setStatus(s, arr.length+' marchés', srcOk?'':'err');
     });
+    // Polymarket : chargé en direct côté navigateur (l'API bloque les IP datacenter du robot)
+    renderPMcat(active);
   }
+  function renderPMcat(cat){
+    if(pmLive[cat]){laneRender('polymarket',pmLive[cat],'Aucun marché dans cette catégorie.');setStatus('polymarket',pmLive[cat].length+' · en direct');return;}
+    document.querySelector('#sec-polymarket .grid').innerHTML='<div class="empty">Chargement en direct…</div>';setStatus('polymarket','chargement…');
+    var seq=++pmSeq, c=cat;
+    loadPMcat(catSlug(c)).then(function(it){pmLive[c]=it;try{localStorage.setItem('pm_'+c,JSON.stringify(it));}catch(e){}if(c!==active||seq!==pmSeq||query.length>=2)return;laneRender('polymarket',it,'Aucun marché dans cette catégorie.');setStatus('polymarket',it.length+' · en direct');})
+    .catch(function(){if(c!==active||seq!==pmSeq||query.length>=2)return;var f=DATA.all.filter(function(x){return x.s==='polymarket'&&x.c===c;}).sort(byV).slice(0,40);if(!f.length){try{f=JSON.parse(localStorage.getItem('pm_'+c))||[];}catch(e){f=[];}}laneRender('polymarket',f,'Polymarket indisponible — réessaie « Rafraîchir ».');setStatus('polymarket',f.length?f.length+' · hors-ligne':'erreur',f.length?'':'err');});
+  }
+  async function loadPMcat(slug){var d=await jget('https://gamma-api.polymarket.com/events?closed=false&limit=24&order=volume24hr&ascending=false&tag_slug='+slug);return pmParse(d).sort(byV).slice(0,40);}
 
   // ---- recherche EN DIRECT sur tout le catalogue ----
   // GitHub Pages n'a pas la CSP des artifacts : le navigateur peut appeler Manifold
   // directement et Polymarket via le proxy jina. Kalshi n'a pas de recherche texte,
   // on filtre donc l'instantané collecté (et Kalshi couvre peu la politique non-US).
   var JINA='https://r.jina.ai/', sseq=0;
+  async function jget(url){var r=await fetch(JINA+url,{headers:{'x-respond-with':'text'}});if(!r.ok)throw new Error('HTTP '+r.status);return JSON.parse(await r.text());}
   function money(n){n=+n||0;if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B vol';if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M vol';if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'k vol';return '$'+n.toFixed(0)+' vol';}
   function comp(n){n=+n||0;if(n>=1e6)return (n/1e6).toFixed(1)+'M';if(n>=1e3)return (n/1e3).toFixed(0)+'k';return n.toFixed(0);}
   function pmParse(evs){return (evs||[]).map(function(e){var ms=e.markets||[],outs=[];for(var i=0;i<ms.length;i++){var m=ms[i];if(m.closed)continue;var pr;try{pr=JSON.parse(m.outcomePrices||'[]');}catch(x){continue;}if(!pr.length)continue;var y=parseFloat(pr[0]);if(!isFinite(y))continue;outs.push({l:ms.length>1?(m.groupItemTitle||m.question):'Oui',p:Math.round(y*1e4)/1e4});}outs=outs.filter(function(o){return !/^(person|candidate|outcome|team|option)\s*\d+$/i.test(String(o.l).trim());});if(!outs.length)return null;if(outs.length>1){var ps=outs.map(function(o){return o.p;});if(Math.max.apply(null,ps)-Math.min.apply(null,ps)<0.01)return null;}outs.sort(function(a,b){return b.p-a.p;});return {s:'polymarket',t:e.title,u:e.slug?('https://polymarket.com/event/'+e.slug):'',e:e.endDate||'',v:+e.volume||0,m:money(+e.volume),o:outs.slice(0,6)};}).filter(Boolean);}
@@ -236,7 +250,7 @@
     if(query.length>=2)runSearch(query);else render();
     btn.classList.remove('busy');btn.disabled=false;
   }
-  btn.addEventListener('click',function(){loadData(true);});
+  btn.addEventListener('click',function(){pmLive={};pmSeq++;loadData(true);});
 
   render();
   loadData(false);
