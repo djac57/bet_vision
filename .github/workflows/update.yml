@@ -29,7 +29,8 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html data.json og.png _site/
+          cp index.html data.json og.png fonts.css _site/
+          cp -r fonts _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

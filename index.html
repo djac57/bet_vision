@@ -17,7 +17,6 @@
 <meta name="twitter:title" content="Baromètre des paris · Betting Barometer">
 <meta name="twitter:description" content="Cotes des marchés de prédiction en direct · Live prediction-market odds">
 <meta name="twitter:image" content="https://djac57.github.io/bet_vision/og.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap">
 <style>
   :root{
     --bg:#e8e6df; --fg:#17150f; --muted:#8a8578; --border:#cdc9bd;
@@ -155,7 +154,9 @@
 
   footer.foot{border-top:3px solid var(--rule);margin-top:12px;padding-top:12px;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
   footer.foot b{color:var(--fg)} footer.foot .mono{font-family:var(--mono)} footer.foot a{color:var(--accent)}
+  footer.foot-priv{text-transform:none;letter-spacing:0;font-size:9px;opacity:.7;border-top:0;margin-top:6px;padding-top:0;line-height:1.5}
 </style>
+  <link rel="stylesheet" href="fonts.css">
 </head>
 <body>
 <div class="wrap">
@@ -188,6 +189,7 @@
   </section>
 
   <footer class="foot">cotes indicatives pour recherche uniquement, pas un conseil d'investissement</footer>
+  <footer class="foot foot-priv"></footer>
 </div>
 
 <div class="overlay" id="ov" hidden>
@@ -217,8 +219,8 @@
   var SOURCES=['polymarket','kalshi','manifold'];
   var DATA=null, active='trending', query='';
   var T={
-    fr:{title:'Baromètre des paris',refresh:'Rafraîchir',searchPh:'Rechercher dans tout le catalogue (ex. le pen, bitcoin, super bowl)…',resolution:'Résolution',loading:'Chargement…',loadingLive:'Chargement en direct…',searchingLive:'Recherche en direct…',noMarket:'Aucun marché dans cette catégorie.',noResult:'Aucun résultat.',srcUnavail:'Source indisponible à la dernière collecte.',pmUnavail:'Polymarket indisponible — réessaie « Rafraîchir ».',footer:'cotes indicatives pour recherche uniquement, pas un conseil d’investissement',chartLoading:'Chargement de l’historique…',chartNone:'Historique indisponible pour ce marché.',chartErr:'Historique indisponible — réessaie.',chartNote:'',range1m:'1 mois',rangeAll:'Tout',share:'Partager',cats:{trending:'Tendances',politique:'Politique',crypto:'Crypto',sport:'Sport',eco:'Éco & Finance',culture:'Culture',monde:'Monde',tech:'Tech & Science'}},
-    en:{title:'Betting Barometer',refresh:'Refresh',searchPh:'Search the whole catalogue (e.g. le pen, bitcoin, super bowl)…',resolution:'Resolves',loading:'Loading…',loadingLive:'Loading live…',searchingLive:'Searching live…',noMarket:'No markets in this category.',noResult:'No results.',srcUnavail:'Source unavailable at last collection.',pmUnavail:'Polymarket unavailable — try Refresh.',footer:'odds for research only, not investment advice',chartLoading:'Loading history…',chartNone:'No history available for this market.',chartErr:'History unavailable — try again.',chartNote:'',range1m:'1M',rangeAll:'All time',share:'Share',cats:{trending:'Trending',politique:'Politics',crypto:'Crypto',sport:'Sports',eco:'Econ & Finance',culture:'Culture',monde:'World',tech:'Tech & Science'}}
+    fr:{title:'Baromètre des paris',refresh:'Rafraîchir',searchPh:'Rechercher dans tout le catalogue (ex. le pen, bitcoin, super bowl)…',resolution:'Résolution',loading:'Chargement…',loadingLive:'Chargement en direct…',searchingLive:'Recherche en direct…',noMarket:'Aucun marché dans cette catégorie.',noResult:'Aucun résultat.',srcUnavail:'Source indisponible à la dernière collecte.',pmUnavail:'Polymarket indisponible — réessaie « Rafraîchir ».',footer:'cotes indicatives pour recherche uniquement, pas un conseil d’investissement',chartLoading:'Chargement de l’historique…',chartNone:'Historique indisponible pour ce marché.',chartErr:'Historique indisponible — réessaie.',chartNote:'',range1m:'1 mois',rangeAll:'Tout',share:'Partager',priv:'Analytics anonymes sans cookies (GoatCounter). Polices auto-hébergées. Cotes de marché relayées via le proxy Jina. Hébergé sur GitHub Pages — aucun cookie, aucune donnée personnelle.',cats:{trending:'Tendances',politique:'Politique',crypto:'Crypto',sport:'Sport',eco:'Éco & Finance',culture:'Culture',monde:'Monde',tech:'Tech & Science'}},
+    en:{title:'Betting Barometer',refresh:'Refresh',searchPh:'Search the whole catalogue (e.g. le pen, bitcoin, super bowl)…',resolution:'Resolves',loading:'Loading…',loadingLive:'Loading live…',searchingLive:'Searching live…',noMarket:'No markets in this category.',noResult:'No results.',srcUnavail:'Source unavailable at last collection.',pmUnavail:'Polymarket unavailable — try Refresh.',footer:'odds for research only, not investment advice',chartLoading:'Loading history…',chartNone:'No history available for this market.',chartErr:'History unavailable — try again.',chartNote:'',range1m:'1M',rangeAll:'All time',share:'Share',priv:'Anonymous analytics, no cookies (GoatCounter). Self-hosted fonts. Market odds relayed via the Jina proxy. Hosted on GitHub Pages — no cookies, no personal data.',cats:{trending:'Trending',politique:'Politics',crypto:'Crypto',sport:'Sports',eco:'Econ & Finance',culture:'Culture',monde:'World',tech:'Tech & Science'}}
   };
   var lang='fr';try{lang=localStorage.getItem('lang')||((navigator.language||'').slice(0,2)==='en'?'en':'fr');}catch(e){}
   function tr(k){return (T[lang]||T.fr)[k];}
@@ -401,7 +403,7 @@
   var tabsEl=document.getElementById('tabs');
   CATS.forEach(function(c){var b=document.createElement('button');b.className='tab';b.textContent=catLabel(c[0]);b.dataset.cat=c[0];b.setAttribute('role','tab');b.setAttribute('aria-selected',c[0]===active?'true':'false');b.addEventListener('click',function(){active=c[0];query='';sseq++;document.getElementById('q').value='';updateTabs();render();});tabsEl.appendChild(b);});
   function updateTabs(){Array.prototype.forEach.call(tabsEl.children,function(b){b.setAttribute('aria-selected',b.dataset.cat===active?'true':'false');});}
-  function applyStatic(){var t=T[lang]||T.fr;document.title=t.title;document.querySelector('h1').textContent=t.title;document.getElementById('reftxt').textContent=t.refresh;document.getElementById('q').placeholder=t.searchPh;document.querySelector('.foot').textContent=t.footer;Array.prototype.forEach.call(tabsEl.children,function(b){b.textContent=t.cats[b.dataset.cat];});Array.prototype.forEach.call(document.querySelectorAll('#lang button'),function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});try{document.documentElement.lang=lang;}catch(e){}}
+  function applyStatic(){var t=T[lang]||T.fr;document.title=t.title;document.querySelector('h1').textContent=t.title;document.getElementById('reftxt').textContent=t.refresh;document.getElementById('q').placeholder=t.searchPh;document.querySelector('.foot').textContent=t.footer;var _fp=document.querySelector('.foot-priv');if(_fp)_fp.textContent=t.priv;Array.prototype.forEach.call(tabsEl.children,function(b){b.textContent=t.cats[b.dataset.cat];});Array.prototype.forEach.call(document.querySelectorAll('#lang button'),function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});try{document.documentElement.lang=lang;}catch(e){}}
   Array.prototype.forEach.call(document.querySelectorAll('#lang button'),function(b){b.addEventListener('click',function(){lang=b.dataset.lang;try{localStorage.setItem('lang',lang);}catch(e){}applyStatic();if(query.length>=2)runSearch(query);else render();});});
 
   // recherche
