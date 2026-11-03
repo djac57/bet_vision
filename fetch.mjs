@@ -48,7 +48,15 @@ function pmItems(evs, cat) {
     return { s: 'polymarket', t: e.title, u: e.slug ? 'https://polymarket.com/event/' + e.slug : '', e: e.endDate || '', c: cat, v: +e.volume || 0, m: money(+e.volume), o: outs.slice(0, 6) };
   }).filter(Boolean);
 }
-function kPrice(m){ for(const k of ['last_price_dollars','yes_ask_dollars','yes_bid_dollars']){ const v=m[k]; if(v!=null&&isFinite(+v)&&+v>0) return +v; } return null; }
+function kPrice(m){
+  // Proba = mid (bid+ask)/2 d'un VRAI marché à deux faces ; sinon le dernier prix SI ça a tradé ;
+  // sinon rien. Évite les "ask fantômes" sans acheteur (ex. contrat jamais tradé affiché à 92 %).
+  const last=+m.last_price_dollars, bid=+m.yes_bid_dollars, ask=+m.yes_ask_dollars;
+  const vol=+m.volume_fp||0, oi=+m.open_interest_fp||0;
+  if(isFinite(bid)&&isFinite(ask)&&bid>0&&ask>0&&ask<1) return (bid+ask)/2;
+  if(isFinite(last)&&last>0&&last<1&&(vol>0||oi>0)) return last;
+  return null;
+}
 function kItem(e) {
   const ms = e.markets || [], outs = []; let oi = 0, end = null;
   for (const m of ms) {
