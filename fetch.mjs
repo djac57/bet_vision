@@ -3,8 +3,15 @@
 // donc on appelle les API directement. Écrit data.json à la racine du repo.
 // Node 18+ (fetch global). Aucune dépendance.
 
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 
+// France et Europe d'abord : collectés en plus de leur catégorie d'origine (repérés par le titre).
+const GEO = [
+  { key: 'france', re: /\b(france|french|fran[cç]aise?s?|macron|le ?pen|bardella|m[ée]lenchon|lecornu|philippe|attal|retailleau|lisnard|glucksmann|[ée]lys[ée]e|paris|psg|ligue 1)\b/i,
+    man: 'France OR French OR Macron OR "Le Pen" OR Bardella OR Melenchon OR Paris' },
+  { key: 'europe', re: /\b(europe|european|eu|eurozone|euro area|ecb|germany|german|bundestag|merz|uk|britain|british|starmer|spain|spanish|italy|italian|meloni|poland|polish|netherlands|dutch|sweden|belgium|portugal|swiss|switzerland|austria|greece|ireland|denmark|norway|finland|czech|hungary|orb[aá]n|romania)\b/i,
+    man: 'Europe OR EU OR ECB OR Germany OR UK OR Spain OR Italy OR Poland OR Netherlands' },
+];
 const CATS = [
   { key: 'politique', pm: 'politics',    man: 'election OR president OR senate OR congress OR government OR democrat OR republican OR trump' },
   { key: 'crypto',    pm: 'crypto',      man: 'bitcoin OR ethereum OR crypto OR solana OR BTC OR ETH' },
@@ -87,13 +94,14 @@ async function run() {
   // Kalshi — pagination au curseur, réparti dans les onglets
   try {
     const base = 'https://api.elections.kalshi.com/trade-api/v2/events?limit=200&status=open&with_nested_markets=true';
-    const buckets = {}; CATS.forEach(c => buckets[c.key] = []);
+    const buckets = {}; CATS.forEach(c => buckets[c.key] = []); GEO.forEach(g => buckets[g.key] = []);
     let cursor = null, pages = 0, seen = 0;
     do {
       const data = await getJSON(base + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
       const evs = data.events || []; seen += evs.length;
       for (const e of evs) {
         const it = kItem(e); if (!it) continue;
+        for (const g of GEO) if (g.re.test(e.title || '')) { buckets[g.key].push({ ...it, c: g.key }); break; }
         const tab = CRYPTO.test(e.title || '') ? 'crypto' : KMAP[e.category];
         if (!tab) continue;
         it.c = tab; buckets[tab].push(it);
@@ -112,7 +120,7 @@ async function run() {
 
   // Manifold — recherche par thème (monnaie fictive)
   try {
-    for (const c of CATS) {
+    for (const c of [...GEO, ...CATS]) {
       const arr = await getJSON(`https://api.manifold.markets/v0/search-markets?term=${encodeURIComponent(c.man)}&limit=40&sort=liquidity&filter=open&contractType=BINARY`);
       const items = manItems(arr, c.key).slice(0, 30);
       all.push(...items); sources.manifold.n += items.length;
@@ -134,8 +142,34 @@ async function run() {
     process.exitCode = 1;
     return;
   }
-  const out = { generated: new Date().toISOString(), sources, all };
+  const generated = new Date().toISOString();
+  const prev = previous(generated);
+  const out = { generated, sources, all };
+  if (prev) { out.prev = prev; out.moves = moves(all, prev); }
   writeFileSync('data.json', JSON.stringify(out));
   console.log('Wrote data.json —', all.length, 'markets', JSON.stringify(sources));
+}
+// ---- « ce qui a bougé » : comparaison avec le data.json COMMITÉ un jour précédent ----
+// Le data.json lu ici est celui du dépôt (dernier commit). S'il date d'un jour précédent, il devient la
+// référence ; s'il est déjà d'aujourd'hui, on reprend la référence qu'il porte (commitée avec lui).
+// Clés stables : ticker Kalshi, URL Manifold. Polymarket n'est pas dans data.json (collecté côté navigateur).
+function okey(it, o) { return it.s === 'kalshi' ? (o.tk ? 'k|' + o.tk : null) : it.s === 'manifold' ? (it.u ? 'm|' + it.u : null) : null; }
+function snapshot(all) { const p = {}; for (const it of all || []) for (const o of it.o || []) { const k = okey(it, o); if (k) p[k] = o.p; } return p; }
+function previous(generated) {
+  let old = null; try { old = JSON.parse(readFileSync('data.json', 'utf8')); } catch { return null; }
+  if (!old || !old.generated) return null;
+  if (old.generated.slice(0, 10) < generated.slice(0, 10)) return { date: old.generated, p: snapshot(old.all) };
+  return old.prev && old.prev.p ? old.prev : null;
+}
+function moves(all, prev) {
+  const out = [], seen = new Set();
+  for (const it of all) for (const o of it.o || []) {
+    const k = okey(it, o); if (!k || !(k in prev.p)) continue;
+    const d = r4(o.p - prev.p[k]); if (Math.abs(d) < 0.02) continue;      // < 2 points : bruit
+    const id = k + '|' + it.c; if (seen.has(id)) continue; seen.add(id);
+    out.push({ s: it.s, t: it.t, u: it.u, c: it.c, l: o.l, p: o.p, d });
+  }
+  out.sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+  const per = {}; return out.filter(m => (per[m.c] = (per[m.c] || 0) + 1) <= 12);   // 12 par onglet au plus
 }
 run().catch(e => { console.error(e); process.exit(1); });
