@@ -5,10 +5,10 @@ on:
     - cron: '0 * * * *'      # toutes les heures (Kalshi + Manifold ; Polymarket est déjà en direct côté navigateur)
   workflow_dispatch:          # bouton "Run workflow" manuel
   push:
-    branches: [ main ]        # redéploie à chaque push
+    branches: [ main ]        # redéploie à chaque push (un push du robot via GITHUB_TOKEN ne redéclenche rien : pas de boucle)
 
 permissions:
-  contents: read
+  contents: write             # committer data.json (dernier bon fichier)
   pages: write
   id-token: write
 
@@ -19,14 +19,37 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      fetch: ${{ steps.fetch.outcome }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Fetch odds (API directes, runner US)
-        continue-on-error: true   # une source en panne ne doit jamais bloquer le déploiement (data.json précédent conservé)
+        id: fetch
+        continue-on-error: true   # une source en panne ne doit jamais bloquer le déploiement (le job « verdict » met le run au rouge)
         run: node fetch.mjs
+      # data.json contient un horodatage `generated` qui change à chaque passage : on ne le commite
+      # donc qu'UNE FOIS PAR JOUR (UTC), quand le fichier versionné date d'un jour précédent, et
+      # seulement si la collecte a entièrement réussi. Le dépôt garde ainsi le dernier bon fichier
+      # (vieux de 24 h au plus), redéployé tel quel quand fetch.mjs échoue.
+      - name: Committer data.json (une fois par jour)
+        if: steps.fetch.outcome == 'success'
+        continue-on-error: true   # un échec d'envoi ne doit JAMAIS empêcher le déploiement
+        run: |
+          JOUR_DEPOT="$(git show HEAD:data.json | grep -o '"generated":"[0-9-]*' | head -1 | cut -d'"' -f4)"
+          if [ "$JOUR_DEPOT" = "$(date -u +%Y-%m-%d)" ]; then echo "data.json déjà commité aujourd'hui ($JOUR_DEPOT)."; exit 0; fi
+          if [ -z "$(git status --porcelain data.json)" ]; then echo "data.json inchangé."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git commit -m "Cotes mises à jour ($(date -u +%Y-%m-%d))"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            echo "Envoi refusé, nouvel essai ($i)…"; sleep $((i * 5))
+          done
+          echo "::warning::data.json non poussé après 3 essais (le site est tout de même déployé)"
       - name: Assemble site
         run: |
           mkdir -p _site
@@ -46,3 +69,16 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # Le site est déployé dans tous les cas ; ce job met le run AU ROUGE si la collecte a échoué.
+  verdict:
+    needs: [build, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Échec si la collecte a échoué
+        run: |
+          if [ "${{ needs.build.outputs.fetch }}" != "success" ]; then
+            echo "::error::fetch.mjs a échoué (collecte : ${{ needs.build.outputs.fetch }}) — le site a été redéployé avec les dernières données disponibles."
+            exit 1
+          fi

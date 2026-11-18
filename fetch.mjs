@@ -48,12 +48,15 @@ function pmItems(evs, cat) {
     return { s: 'polymarket', t: e.title, u: e.slug ? 'https://polymarket.com/event/' + e.slug : '', e: e.endDate || '', c: cat, v: +e.volume || 0, m: money(+e.volume), o: outs.slice(0, 6) };
   }).filter(Boolean);
 }
+const KSPREAD = 0.15; // écart achat/vente maximal pour se fier au milieu de fourchette
 function kPrice(m){
   // Proba = mid (bid+ask)/2 d'un VRAI marché à deux faces ; sinon le dernier prix SI ça a tradé ;
   // sinon rien. Évite les "ask fantômes" sans acheteur (ex. contrat jamais tradé affiché à 92 %).
+  // Le mid n'a de sens que si la fourchette est serrée (écart ≤ 0,15) : achat 0,01 / vente 0,99
+  // donnerait 50 % sur un carnet vide.
   const last=+m.last_price_dollars, bid=+m.yes_bid_dollars, ask=+m.yes_ask_dollars;
   const vol=+m.volume_fp||0, oi=+m.open_interest_fp||0;
-  if(isFinite(bid)&&isFinite(ask)&&bid>0&&ask>0&&ask<1) return (bid+ask)/2;
+  if(isFinite(bid)&&isFinite(ask)&&bid>0&&ask>0&&ask<1&&ask-bid<=KSPREAD+1e-9) return (bid+ask)/2;
   if(isFinite(last)&&last>0&&last<1&&(vol>0||oi>0)) return last;
   return null;
 }
@@ -121,6 +124,14 @@ async function run() {
   // on conserve la dernière version valide versionnée pour ne pas vider le site.
   if (!all.length) {
     console.error('Aucun marché collecté — conservation du data.json existant.');
+    process.exitCode = 1;   // le workflow passe au rouge (et redéploie le dernier bon fichier)
+    return;
+  }
+  // Une seule source en panne : on n'écrit pas un fichier amputé d'une source, on garde le dernier
+  // bon data.json (la page affiche sa date) et on sort en erreur → workflow rouge.
+  if (!sources.kalshi.ok || !sources.manifold.ok) {
+    console.error('Source en panne — conservation du data.json existant.', JSON.stringify(sources));
+    process.exitCode = 1;
     return;
   }
   const out = { generated: new Date().toISOString(), sources, all };
